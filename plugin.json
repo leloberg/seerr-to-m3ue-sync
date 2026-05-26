@@ -1,0 +1,120 @@
+{
+    "id": "seerr-to-m3ue-sync",
+    "name": "Seerr to m3ue Sync",
+    "version": "1.1.0",
+    "api_version": "1.0.0",
+    "description": "Polls a Seerr instance and enables matched VOD and Series in a target Playlist.",
+    "entrypoint": "Plugin.php",
+    "class": "AppLocalPlugins\\SeerrToM3ueSync\\Plugin",
+    "capabilities": [
+        "scheduled"
+    ],
+    "hooks": [
+        "playlist.synced"
+    ],
+    "permissions": [
+        "queue_jobs",
+        "db_read",
+        "db_write",
+        "network_egress",
+        "hook_subscriptions",
+        "scheduled_runs"
+    ],
+    "schema": {
+        "tables": []
+    },
+    "data_ownership": {
+        "tables": [],
+        "directories": [],
+        "files": [],
+        "default_cleanup_policy": "preserve"
+    },
+    "settings": [
+        {
+            "id": "seerr_url",
+            "label": "Seerr URL",
+            "type": "text"
+        },
+        {
+            "id": "seerr_api_key",
+            "label": "API Key",
+            "type": "text"
+        },
+        {
+            "id": "target_movie_playlist",
+            "label": "Target Movie Playlist",
+            "type": "model_select",
+            "model": "App\\Models\\Playlist",
+            "label_attribute": "name"
+        },
+        {
+            "id": "target_series_playlist",
+            "label": "Target Series Playlist",
+            "type": "model_select",
+            "model": "App\\Models\\Playlist",
+            "label_attribute": "name"
+        },
+        {
+            "id": "include_movies",
+            "label": "Include Movies",
+            "type": "boolean",
+            "default": true
+        },
+        {
+            "id": "include_series",
+            "label": "Include Series",
+            "type": "boolean",
+            "default": true
+        },
+        {
+            "id": "enable_4k",
+            "label": "Enable 4K Variants",
+            "type": "boolean",
+            "default": false
+        },
+        {
+            "id": "probe_missing_streams",
+            "label": "Probe Missing Stream Stats",
+            "type": "boolean",
+            "default": true
+        },
+        {
+            "id": "disable_unselected_variants",
+            "label": "Disable Unselected Variants",
+            "type": "boolean",
+            "default": true
+        },
+        {
+            "id": "schedule_enabled",
+            "label": "Enable Scheduled Sync",
+            "type": "boolean",
+            "default": false
+        },
+        {
+            "id": "schedule_cron",
+            "label": "Schedule (Cron Expression)",
+            "type": "text",
+            "default": "0 * * * *"
+        }
+    ],
+    "actions": [
+        {
+            "id": "sync",
+            "label": "Sync Now",
+            "dry_run": false,
+            "fields": []
+        },
+        {
+            "id": "preview",
+            "label": "Preview Sync",
+            "dry_run": true,
+            "fields": []
+        },
+        {
+            "id": "health_check",
+            "label": "Health Check",
+            "dry_run": true,
+            "fields": []
+        }
+    ]
+}

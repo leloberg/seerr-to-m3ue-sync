@@ -1,0 +1,15 @@
+# Release artifacts
+*.zip
+*.tar.gz
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# PHP deps (plugins ship no Composer deps)
+/vendor/
+composer.lock

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:m3ue.sparkison.dev)",
+      "WebFetch(domain:docs.seerr.dev)"
+    ]
+  }
+}

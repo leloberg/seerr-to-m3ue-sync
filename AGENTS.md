@@ -1,0 +1,62 @@
+# AGENTS.md
+
+This is the `seerr-to-m3ue-sync` plugin for [m3u-editor](https://github.com/m3ue/m3u-editor).
+
+## What This Plugin Does
+
+Seerr to m3ue Sync — see `plugin.json` for the full manifest including capabilities, hooks, permissions, and settings.
+
+## Architecture Rules
+
+- `plugin.json` and `Plugin.php` are the only runtime files. Everything else is tooling.
+- The Plugin class implements contracts based on declared capabilities:
+  - All plugins: `PluginInterface` (provides `runAction()`)
+  - Hooks declared: `HookablePluginInterface` (provides `runHook()`)
+  - `scheduled` capability: `ScheduledPluginInterface` (provides `scheduledActions()`)
+  - `channel_processor`: `ChannelProcessorPluginInterface`
+  - `epg_processor`: `EpgProcessorPluginInterface`
+  - `stream_analysis`: `StreamAnalysisPluginInterface`
+  - Lifecycle cleanup: `LifecyclePluginInterface` (provides `uninstall()`)
+- Plugins run as queued background jobs, never inline during HTTP requests.
+- All work happens through `runAction()` or `runHook()` — no other entry points.
+
+## Manifest Rules
+
+- `id` must match the directory name and be a valid slug
+- `api_version` must be `1.0.0` (current host version)
+- `class` must follow `AppLocalPlugins\SeerrToM3ueSync\Plugin` namespace pattern
+- `capabilities` determines which interfaces the Plugin class must implement
+- `hooks` requires `hook_subscriptions` permission
+- `scheduled` capability requires `scheduled_runs` permission
+- Plugin-owned tables must be prefixed with `plugin_seerr-to-m3ue-sync_` (dashes to underscores)
+- Plugin-owned storage must be under `plugin-data/seerr-to-m3ue-sync/` or `plugin-reports/seerr-to-m3ue-sync/`
+
+## Permissions Reference
+
+Only declare what you actually use:
+- `db_read` / `db_write` — access to m3u-editor's database via Eloquent
+- `schema_manage` — required if you declare tables in `schema.tables`
+- `filesystem_read` / `filesystem_write` — access to plugin-owned storage paths
+- `network_egress` — calls to external APIs (declarative only, not enforced)
+- `queue_jobs` — run actions through background jobs (almost always needed)
+- `hook_subscriptions` — receive host lifecycle events
+- `scheduled_runs` — run on a cron schedule
+
+**High-risk permissions** that get extra scrutiny during review: `network_egress`, `filesystem_write`, `schema_manage`.
+
+## Guardrails
+
+- Do not add top-level executable code outside the Plugin class
+- Do not widen manifest permissions without updating README and release notes
+- Always check `$context->dryRun` and `$context->cancellationRequested()` in long operations
+- Use `$context->info/warning/error()` for logging — it goes to the run log visible in the UI
+- Use `$context->heartbeat()` or `$context->checkpoint()` in loops to keep the run alive
+- Return `PluginActionResult::success/failure/cancelled()` — never throw exceptions from actions
+- Package only runtime files for release artifacts (`bash scripts/package-plugin.sh`)
+
+## Security
+
+- The host validates, scans, and trust-checks plugins before they can run
+- Discovery does not imply trust — an admin must explicitly approve and trust
+- Plugin files are hashed on trust — any change triggers re-review
+- GitHub CI in this repo is a quality signal, not a trust boundary
