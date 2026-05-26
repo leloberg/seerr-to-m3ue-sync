@@ -1,6 +1,6 @@
 # Seerr to m3ue Sync Plugin
 
-👾Just so you know, this plugin has been blatantly written with the vibiest vibe coding without any remorse. Not this part though. That is written by me, and I'm human says my mom
+👾Just so you know, this plugin has been blatantly written with the vibiest vibe coding without any remorse. Not this part though. That is written by me, and I'm only human after all 🎵
 
 A plugin for [m3u-editor](https://github.com/m3ue/m3u-editor) that reads approved requests from Seerr and enables matching movies and series in your library.
 
