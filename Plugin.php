@@ -161,7 +161,58 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
         $movieItems = $seerrCatalog['by_type']['movie']['items'] ?? [];
         $seriesTmdbIds = $seerrCatalog['by_type']['tv']['ids'] ?? [];
         $seriesItems = $seerrCatalog['by_type']['tv']['items'] ?? [];
+        $movieAvailabilityByTmdb = [];
+        $seriesAvailabilityByTmdb = [];
+        $movieSkippedFullyAvailableCount = 0;
+        $seriesSkippedFullyAvailableCount = 0;
+        $seriesSkippedPartialWithoutRequestedSeasons = 0;
         $requestedSeriesSeasonsByTmdb = [];
+
+        foreach ($movieItems as $item) {
+            $itemTmdbId = (int) ($item['tmdb_id'] ?? 0);
+            if ($itemTmdbId <= 0) {
+                continue;
+            }
+
+            $movieAvailabilityByTmdb[$itemTmdbId] = (int) ($item['availability_status'] ?? 0);
+        }
+
+        foreach ($seriesItems as $item) {
+            $itemTmdbId = (int) ($item['tmdb_id'] ?? 0);
+            if ($itemTmdbId <= 0) {
+                continue;
+            }
+
+            $seriesAvailabilityByTmdb[$itemTmdbId] = (int) ($item['availability_status'] ?? 0);
+        }
+
+        $movieTmdbIds = array_values(array_filter(
+            $movieTmdbIds,
+            function (int $tmdbId) use ($movieAvailabilityByTmdb, &$movieSkippedFullyAvailableCount): bool {
+                $status = (int) ($movieAvailabilityByTmdb[$tmdbId] ?? 0);
+                if ($status === 5) {
+                    $movieSkippedFullyAvailableCount++;
+
+                    return false;
+                }
+
+                return true;
+            }
+        ));
+
+        $seriesTmdbIds = array_values(array_filter(
+            $seriesTmdbIds,
+            function (int $tmdbId) use ($seriesAvailabilityByTmdb, &$seriesSkippedFullyAvailableCount): bool {
+                $status = (int) ($seriesAvailabilityByTmdb[$tmdbId] ?? 0);
+                if ($status === 5) {
+                    $seriesSkippedFullyAvailableCount++;
+
+                    return false;
+                }
+
+                return true;
+            }
+        ));
 
         foreach ($seriesItems as $item) {
             $seriesTmdbId = (int) ($item['tmdb_id'] ?? 0);
@@ -191,6 +242,12 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
         }
 
         $context->info('Found ' . count($tmdbIds) . ' available TMDB ID(s) in Seerr.');
+        if ($movieSkippedFullyAvailableCount > 0) {
+            $context->info('Skipping ' . $movieSkippedFullyAvailableCount . ' movie item(s) already fully available in Seerr/Jellyfin (media.status=5).');
+        }
+        if ($seriesSkippedFullyAvailableCount > 0) {
+            $context->info('Skipping ' . $seriesSkippedFullyAvailableCount . ' series item(s) already fully available in Seerr/Jellyfin (media.status=5).');
+        }
         if ($tmdbIds !== []) {
             $context->info('Seerr TMDB IDs: ' . json_encode($tmdbIds, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
@@ -430,9 +487,24 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             }
 
             $seriesTmdbId = $this->resolveSeriesTmdbId($series);
+            $seriesAvailabilityStatus = $seriesTmdbId !== null
+                ? (int) ($seriesAvailabilityByTmdb[$seriesTmdbId] ?? 0)
+                : 0;
+
+            if ($seriesAvailabilityStatus === 5) {
+                // Fully available titles should not be re-enabled/toggled by this plugin.
+                continue;
+            }
+
             $requestedSeasons = ($seriesTmdbId !== null && isset($requestedSeriesSeasonsByTmdb[$seriesTmdbId]))
                 ? $requestedSeriesSeasonsByTmdb[$seriesTmdbId]
                 : [];
+
+            if ($seriesAvailabilityStatus === 4 && $requestedSeasons === []) {
+                // Partial availability should only be processed when specific requested seasons are provided.
+                $seriesSkippedPartialWithoutRequestedSeasons++;
+                continue;
+            }
 
             if ($requestedSeasons === []) {
                 continue;
@@ -549,10 +621,13 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 'series_matched' => count($matchedSeries),
                 'series_newly_enabled' => $seriesEnabledCount,
                 'series_requested_seasons_applied' => $seriesSeasonApplied,
+                'series_skipped_partial_without_requested_seasons' => $seriesSkippedPartialWithoutRequestedSeasons,
                 'series_episodes_newly_enabled' => $seriesEpisodesEnabledCount,
                 'series_episodes_newly_disabled' => $seriesEpisodesDisabledCount,
                 'series_metadata_fetch_attempts' => $seriesMetadataFetchAttempts,
                 'series_metadata_fetch_succeeded' => $seriesMetadataFetchSucceeded,
+                'movie_skipped_fully_available' => $movieSkippedFullyAvailableCount,
+                'series_skipped_fully_available' => $seriesSkippedFullyAvailableCount,
                 'seerr_tmdb_id_count' => count($tmdbIds),
                 'movie_seerr_tmdb_ids' => $movieTmdbIds,
                 'series_seerr_tmdb_ids' => $seriesTmdbIds,
@@ -1192,7 +1267,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
      * Uses the API's mediaType query param for server-side filtering.
      * Returns null on a first-page connection failure.
      *
-     * @return array{ids: array<int>, items: array<int, array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>}>}|null
+    * @return array{ids: array<int>, items: array<int, array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>, availability_status: int}>}|null
      */
     private function paginateRequests(
         string $seerrUrl,
@@ -1278,6 +1353,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                         'title' => $title,
                         'media_type' => (string) ($request['media']['mediaType'] ?? $mediaType),
                         'requested_seasons' => $this->extractSeerrRequestedSeasons($request),
+                        'availability_status' => (int) ($request['media']['status'] ?? 0),
                     ];
                     continue;
                 }
@@ -1287,6 +1363,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                     'title' => $this->extractSeerrRequestTitle($request),
                     'media_type' => (string) ($request['media']['mediaType'] ?? $mediaType),
                     'requested_seasons' => $this->extractSeerrRequestedSeasons($request),
+                    'availability_status' => (int) ($request['media']['status'] ?? 0),
                 ]);
             }
 
@@ -1375,9 +1452,9 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
     }
 
     /**
-     * @param array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>} $existing
-     * @param array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>} $incoming
-     * @return array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>}
+    * @param array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>, availability_status?: int} $existing
+    * @param array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>, availability_status?: int} $incoming
+    * @return array{tmdb_id: int, title: string, media_type: string, requested_seasons: array<int>, availability_status?: int}
      */
     private function mergeSeerrRequestedItem(array $existing, array $incoming): array
     {
@@ -1389,6 +1466,15 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
 
         if (($existing['title'] ?? 'unknown') === 'unknown' && ($incoming['title'] ?? 'unknown') !== 'unknown') {
             $existing['title'] = $incoming['title'];
+        }
+
+        $existingStatus = (int) ($existing['availability_status'] ?? 0);
+        $incomingStatus = (int) ($incoming['availability_status'] ?? 0);
+        if ($existingStatus <= 0) {
+            $existing['availability_status'] = $incomingStatus;
+        } elseif ($incomingStatus > 0) {
+            // Keep the least-available status across duplicate requests for the same TMDB ID.
+            $existing['availability_status'] = min($existingStatus, $incomingStatus);
         }
 
         $existing['requested_seasons'] = $mergedSeasons;
