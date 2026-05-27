@@ -1,7 +1,7 @@
 {
     "id": "seerr-to-m3ue-sync",
     "name": "Seerr to m3ue Sync",
-    "version": "1.2.2",
+    "version": "1.3.0",
     "api_version": "1.0.0",
     "description": "Polls a Seerr instance and enables matched VOD and Series in a target Playlist.",
     "entrypoint": "Plugin.php",
@@ -31,95 +31,126 @@
     },
     "settings": [
         {
-            "id": "seerr_url",
-            "label": "Seerr URL",
-            "type": "text",
-            "section": "Seerr Settings"
+            "id": "seerr_settings",
+            "type": "section",
+            "label": "Seerr Settings",
+            "description": "Configure Seerr access and the core sync behavior used by manual, hook, and scheduled runs.",
+            "columns": 2,
+            "fields": [
+                {
+                    "id": "seerr_url",
+                    "label": "Seerr URL",
+                    "type": "text"
+                },
+                {
+                    "id": "seerr_api_key",
+                    "label": "API Key",
+                    "type": "text"
+                },
+                {
+                    "id": "probe_missing_streams",
+                    "label": "Probe Missing Stream Stats",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "id": "disable_unselected_variants",
+                    "label": "Disable Unselected Variants",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "id": "schedule_settings",
+                    "type": "section",
+                    "label": "Scheduled Sync",
+                    "description": "The host evaluates scheduled plugins every minute. Enter a CRON expression for when this plugin should run. CRON examples: https://crontab.guru/",
+                    "fields": [
+                        {
+                            "id": "schedule_enabled",
+                            "label": "Enable Scheduled Sync",
+                            "type": "boolean",
+                            "default": false
+                        },
+                        {
+                            "id": "schedule_cron",
+                            "label": "Schedule (Cron Expression)",
+                            "type": "text",
+                            "default": "0 * * * *",
+                            "helper_text": "Example: 0 * * * *. CRON examples: https://crontab.guru/"
+                        }
+                    ]
+                }
+            ]
         },
         {
-            "id": "seerr_api_key",
-            "label": "API Key",
-            "type": "text",
-            "section": "Seerr Settings"
+            "id": "movie_settings",
+            "type": "section",
+            "label": "Movies",
+            "description": "Movie playlist routing, quality selection, and optional VOD .strm sync.",
+            "columns": 2,
+            "fields": [
+                {
+                    "id": "target_movie_playlist",
+                    "label": "Target Movie Playlist",
+                    "type": "model_select",
+                    "model": "App\\Models\\Playlist",
+                    "label_attribute": "name"
+                },
+                {
+                    "id": "include_movies",
+                    "label": "Include Movies",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "id": "enable_4k_movies",
+                    "label": "Enable 4K Variants",
+                    "type": "boolean",
+                    "default": false,
+                    "helper_text": "Keeps one 4K movie variant in addition to the best non-4K match when available."
+                },
+                {
+                    "id": "sync_vod_strm_files",
+                    "label": "Sync VOD .strm Files After Run",
+                    "type": "boolean",
+                    "default": false
+                }
+            ]
         },
         {
-            "id": "probe_missing_streams",
-            "label": "Probe Missing Stream Stats",
-            "type": "boolean",
-            "default": true,
-            "section": "Seerr Settings"
-        },
-        {
-            "id": "disable_unselected_variants",
-            "label": "Disable Unselected Variants",
-            "type": "boolean",
-            "default": true,
-            "section": "Seerr Settings"
-        },
-        {
-            "id": "schedule_enabled",
-            "label": "Enable Scheduled Sync",
-            "type": "boolean",
-            "default": false,
-            "section": "Seerr Settings"
-        },
-        {
-            "id": "schedule_cron",
-            "label": "Schedule (Cron Expression)",
-            "type": "text",
-            "default": "0 * * * *",
-            "section": "Seerr Settings"
-        },
-        {
-            "id": "target_movie_playlist",
-            "label": "Target Movie Playlist",
-            "type": "model_select",
-            "model": "App\\Models\\Playlist",
-            "label_attribute": "name",
-            "section": "Movies"
-        },
-        {
-            "id": "include_movies",
-            "label": "Include Movies",
-            "type": "boolean",
-            "default": true,
-            "section": "Movies"
-        },
-        {
-            "id": "enable_4k",
-            "label": "Enable 4K Variants",
-            "type": "boolean",
-            "default": false,
-            "section": "Movies"
-        },
-        {
-            "id": "sync_vod_strm_files",
-            "label": "Sync VOD .strm Files After Run",
-            "type": "boolean",
-            "default": false,
-            "section": "Movies"
-        },
-        {
-            "id": "target_series_playlist",
-            "label": "Target Series Playlist",
-            "type": "model_select",
-            "model": "App\\Models\\Playlist",
-            "label_attribute": "name",
-            "section": "Series"
-        },
-        {
-            "id": "include_series",
-            "label": "Include Series",
-            "type": "boolean",
-            "default": true,
-            "section": "Series"
-        },
-        {
-            "id": "sync_series_strm_files",
-            "label": "Sync Series .strm Files After Run",
-            "type": "boolean",
-            "default": false,
-            "section": "Series"
+            "id": "series_settings",
+            "type": "section",
+            "label": "Series",
+            "description": "Series playlist routing, requested-season syncing, and optional series .strm sync.",
+            "columns": 2,
+            "fields": [
+                {
+                    "id": "target_series_playlist",
+                    "label": "Target Series Playlist",
+                    "type": "model_select",
+                    "model": "App\\Models\\Playlist",
+                    "label_attribute": "name"
+                },
+                {
+                    "id": "include_series",
+                    "label": "Include Series",
+                    "type": "boolean",
+                    "default": true
+                },
+                {
+                    "id": "enable_4k_series",
+                    "label": "Enable 4K Variants",
+                    "type": "boolean",
+                    "default": false,
+                    "helper_text": "Stored independently from the movie setting. Series syncing still follows Seerr requested seasons and availability."
+                },
+                {
+                    "id": "sync_series_strm_files",
+                    "label": "Sync Series .strm Files After Run",
+                    "type": "boolean",
+                    "default": false
+                }
+            ]
         }
     ],
     "actions": [

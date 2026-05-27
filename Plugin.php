@@ -97,7 +97,9 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             ? (int) $settings['target_series_playlist']
             : $legacyPlaylistId;
         $mediaTypes = $this->resolveMediaTypes($settings);
-        $enable4k = (bool) ($settings['enable_4k'] ?? false);
+        $legacyEnable4k = (bool) ($settings['enable_4k'] ?? false);
+        $enable4kMovies = (bool) ($settings['enable_4k_movies'] ?? $legacyEnable4k);
+        $enable4kSeries = (bool) ($settings['enable_4k_series'] ?? $legacyEnable4k);
         $probeMissing = (bool) ($settings['probe_missing_streams'] ?? true);
         $disableUnselectedVariants = (bool) ($settings['disable_unselected_variants'] ?? true);
         $syncVodStrmFiles = (bool) ($settings['sync_vod_strm_files'] ?? false);
@@ -141,7 +143,8 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             'media_types' => $mediaTypes,
             'movie_playlist' => $moviePlaylist?->name,
             'series_playlist' => $seriesPlaylist?->name,
-            'enable_4k' => $enable4k,
+            'enable_4k_movies' => $enable4kMovies,
+            'enable_4k_series' => $enable4kSeries,
             'probe_missing_streams' => $probeMissing,
             'probe_timeout' => $probeTimeout,
             'disable_unselected_variants' => $disableUnselectedVariants,
@@ -375,7 +378,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
 
         [$selectedMovieChannelIds, $qualitySummary] = $this->selectChannelsByQuality(
             $matchedMovieChannels,
-            $enable4k,
+            $enable4kMovies,
             $probeMissing,
             $allowSideEffects,
             $context,
@@ -430,7 +433,9 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                     'seerr_requested_items' => $seerrRequestedItems,
                     'matched_movie_tmdb_ids' => array_values(array_map('intval', array_keys($matchedMovieTmdbIds))),
                     'matched_series_tmdb_ids' => array_values(array_map('intval', array_keys($matchedSeriesTmdbIds))),
-                    'enable_4k' => $enable4k,
+                    'enable_4k_movies' => $enable4kMovies,
+                    'enable_4k_series' => $enable4kSeries,
+                    'enable_4k' => $enable4kMovies,
                     'selected_qualities' => $qualitySummary,
                     'probe_report' => $probeReport,
                 ],
@@ -682,7 +687,9 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 'seerr_requested_items' => $seerrRequestedItems,
                 'matched_movie_tmdb_ids' => array_values(array_map('intval', array_keys($matchedMovieTmdbIds))),
                 'matched_series_tmdb_ids' => array_values(array_map('intval', array_keys($matchedSeriesTmdbIds))),
-                'enable_4k' => $enable4k,
+                'enable_4k_movies' => $enable4kMovies,
+                'enable_4k_series' => $enable4kSeries,
+                'enable_4k' => $enable4kMovies,
                 'selected_qualities' => $qualitySummary,
                 'probe_report' => $probeReport,
                 'strm_sync_requested' => [
