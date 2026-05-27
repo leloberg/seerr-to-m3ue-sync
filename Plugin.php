@@ -2,6 +2,8 @@
 
 namespace AppLocalPlugins\SeerrToM3ueSync;
 
+use App\Jobs\SyncSeriesStrmFiles;
+use App\Jobs\SyncVodStrmFiles;
 use App\Models\Channel;
 use App\Models\Episode;
 use App\Models\Playlist;
@@ -98,6 +100,8 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
         $enable4k = (bool) ($settings['enable_4k'] ?? false);
         $probeMissing = (bool) ($settings['probe_missing_streams'] ?? true);
         $disableUnselectedVariants = (bool) ($settings['disable_unselected_variants'] ?? true);
+        $syncVodStrmFiles = (bool) ($settings['sync_vod_strm_files'] ?? false);
+        $syncSeriesStrmFiles = (bool) ($settings['sync_series_strm_files'] ?? false);
         $isDryRun = (bool) $context->dryRun;
         $allowSideEffects = ! $isDryRun;
 
@@ -141,6 +145,8 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             'probe_missing_streams' => $probeMissing,
             'probe_timeout' => $probeTimeout,
             'disable_unselected_variants' => $disableUnselectedVariants,
+            'sync_vod_strm_files' => $syncVodStrmFiles,
+            'sync_series_strm_files' => $syncSeriesStrmFiles,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $context->heartbeat('Fetching TMDB catalog from Seerr...', progress: 5);
 
@@ -605,6 +611,40 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             );
         }
 
+        $dispatchedStrmJobs = [
+            'vod' => false,
+            'series' => false,
+        ];
+
+        if ($syncVodStrmFiles && $moviePlaylist !== null && $selectedMovieChannelIds !== []) {
+            SyncVodStrmFiles::dispatch(
+                notify: false,
+                playlist_id: $moviePlaylist->id,
+                user_id: $moviePlaylist->user_id,
+                channel_ids: $selectedMovieChannelIds,
+            );
+
+            $dispatchedStrmJobs['vod'] = true;
+            $context->info('Queued VOD .strm sync for ' . count($selectedMovieChannelIds) . ' selected channel(s).');
+        }
+
+        $matchedSeriesIds = array_values(array_map(
+            static fn (Series $series): int => (int) $series->id,
+            $matchedSeries,
+        ));
+
+        if ($syncSeriesStrmFiles && $seriesPlaylist !== null && $matchedSeriesIds !== []) {
+            SyncSeriesStrmFiles::dispatch(
+                notify: false,
+                playlist_id: $seriesPlaylist->id,
+                user_id: $seriesPlaylist->user_id,
+                series_ids: $matchedSeriesIds,
+            );
+
+            $dispatchedStrmJobs['series'] = true;
+            $context->info('Queued series .strm sync for ' . count($matchedSeriesIds) . ' matched series.');
+        }
+
         $context->checkpoint(100, 'Done', log: true);
 
         return PluginActionResult::success(
@@ -639,6 +679,11 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 'enable_4k' => $enable4k,
                 'selected_qualities' => $qualitySummary,
                 'probe_report' => $probeReport,
+                'strm_sync_requested' => [
+                    'vod' => $syncVodStrmFiles,
+                    'series' => $syncSeriesStrmFiles,
+                ],
+                'strm_sync_dispatched' => $dispatchedStrmJobs,
             ],
         );
     }
