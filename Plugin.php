@@ -440,6 +440,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
         $movieEnabledCount = 0;
         $movieDisabledCount = 0;
         $selectedSet = array_fill_keys($selectedMovieChannelIds, true);
+        $movieStrmSyncChannelIds = [];
         $applyTotal = count($matchedMovieChannels);
         $applyProcessed = 0;
 
@@ -464,6 +465,10 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 $movieEnabledCount++;
             }
 
+            if ($shouldEnable) {
+                $movieStrmSyncChannelIds[$channel->id] = true;
+            }
+
             if ($disableUnselectedVariants && ! $shouldEnable && $channel->enabled) {
                 $channel->enabled = false;
                 $channel->save();
@@ -477,6 +482,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
         $seriesSeasonApplied = [];
         $seriesMetadataFetchAttempts = 0;
         $seriesMetadataFetchSucceeded = 0;
+        $seriesStrmSyncIds = [];
         foreach ($matchedSeries as $series) {
             if ($context->cancellationRequested()) {
                 return PluginActionResult::cancelled('Cancelled while applying series changes.', [
@@ -609,6 +615,8 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 . ' (TMDB ' . ($seriesTmdbId ?? 'unknown') . '): '
                 . json_encode($requestedSeasons, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
             );
+
+            $seriesStrmSyncIds[$series->id] = true;
         }
 
         $dispatchedStrmJobs = [
@@ -616,33 +624,31 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             'series' => false,
         ];
 
-        if ($syncVodStrmFiles && $moviePlaylist !== null && $selectedMovieChannelIds !== []) {
+        $movieStrmSyncChannelIds = array_values(array_map('intval', array_keys($movieStrmSyncChannelIds)));
+        $seriesStrmSyncIds = array_values(array_map('intval', array_keys($seriesStrmSyncIds)));
+
+        if ($syncVodStrmFiles && $moviePlaylist !== null && $movieStrmSyncChannelIds !== []) {
             SyncVodStrmFiles::dispatch(
                 notify: false,
                 playlist_id: $moviePlaylist->id,
                 user_id: $moviePlaylist->user_id,
-                channel_ids: $selectedMovieChannelIds,
+                channel_ids: $movieStrmSyncChannelIds,
             );
 
             $dispatchedStrmJobs['vod'] = true;
-            $context->info('Queued VOD .strm sync for ' . count($selectedMovieChannelIds) . ' selected channel(s).');
+            $context->info('Queued VOD .strm sync for ' . count($movieStrmSyncChannelIds) . ' enabled selected channel(s).');
         }
 
-        $matchedSeriesIds = array_values(array_map(
-            static fn (Series $series): int => (int) $series->id,
-            $matchedSeries,
-        ));
-
-        if ($syncSeriesStrmFiles && $seriesPlaylist !== null && $matchedSeriesIds !== []) {
+        if ($syncSeriesStrmFiles && $seriesPlaylist !== null && $seriesStrmSyncIds !== []) {
             SyncSeriesStrmFiles::dispatch(
                 notify: false,
                 playlist_id: $seriesPlaylist->id,
                 user_id: $seriesPlaylist->user_id,
-                series_ids: $matchedSeriesIds,
+                series_ids: $seriesStrmSyncIds,
             );
 
             $dispatchedStrmJobs['series'] = true;
-            $context->info('Queued series .strm sync for ' . count($matchedSeriesIds) . ' matched series.');
+            $context->info('Queued series .strm sync for ' . count($seriesStrmSyncIds) . ' enabled series.');
         }
 
         $context->checkpoint(100, 'Done', log: true);
@@ -684,6 +690,8 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                     'series' => $syncSeriesStrmFiles,
                 ],
                 'strm_sync_dispatched' => $dispatchedStrmJobs,
+                'strm_sync_channel_ids' => $movieStrmSyncChannelIds,
+                'strm_sync_series_ids' => $seriesStrmSyncIds,
             ],
         );
     }

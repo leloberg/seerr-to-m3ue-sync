@@ -1,7 +1,7 @@
 {
     "id": "seerr-to-m3ue-sync",
     "name": "Seerr to m3ue Sync",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "api_version": "1.0.0",
     "description": "Polls a Seerr instance and enables matched VOD and Series in a target Playlist.",
     "entrypoint": "Plugin.php",
