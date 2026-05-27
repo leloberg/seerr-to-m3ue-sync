@@ -1,7 +1,7 @@
 {
     "id": "seerr-to-m3ue-sync",
     "name": "Seerr to m3ue Sync",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "api_version": "1.0.0",
     "description": "Polls a Seerr instance and enables matched VOD and Series in a target Playlist.",
     "entrypoint": "Plugin.php",
@@ -33,80 +33,93 @@
         {
             "id": "seerr_url",
             "label": "Seerr URL",
-            "type": "text"
+            "type": "text",
+            "section": "Seerr Settings"
         },
         {
             "id": "seerr_api_key",
             "label": "API Key",
-            "type": "text"
+            "type": "text",
+            "section": "Seerr Settings"
+        },
+        {
+            "id": "probe_missing_streams",
+            "label": "Probe Missing Stream Stats",
+            "type": "boolean",
+            "default": true,
+            "section": "Seerr Settings"
+        },
+        {
+            "id": "disable_unselected_variants",
+            "label": "Disable Unselected Variants",
+            "type": "boolean",
+            "default": true,
+            "section": "Seerr Settings"
+        },
+        {
+            "id": "schedule_enabled",
+            "label": "Enable Scheduled Sync",
+            "type": "boolean",
+            "default": false,
+            "section": "Seerr Settings"
+        },
+        {
+            "id": "schedule_cron",
+            "label": "Schedule (Cron Expression)",
+            "type": "text",
+            "default": "0 * * * *",
+            "section": "Seerr Settings"
         },
         {
             "id": "target_movie_playlist",
             "label": "Target Movie Playlist",
             "type": "model_select",
             "model": "App\\Models\\Playlist",
-            "label_attribute": "name"
+            "label_attribute": "name",
+            "section": "Movies"
+        },
+        {
+            "id": "include_movies",
+            "label": "Include Movies",
+            "type": "boolean",
+            "default": true,
+            "section": "Movies"
+        },
+        {
+            "id": "enable_4k",
+            "label": "Enable 4K Variants",
+            "type": "boolean",
+            "default": false,
+            "section": "Movies"
+        },
+        {
+            "id": "sync_vod_strm_files",
+            "label": "Sync VOD .strm Files After Run",
+            "type": "boolean",
+            "default": false,
+            "section": "Movies"
         },
         {
             "id": "target_series_playlist",
             "label": "Target Series Playlist",
             "type": "model_select",
             "model": "App\\Models\\Playlist",
-            "label_attribute": "name"
-        },
-        {
-            "id": "include_movies",
-            "label": "Include Movies",
-            "type": "boolean",
-            "default": true
+            "label_attribute": "name",
+            "section": "Series"
         },
         {
             "id": "include_series",
             "label": "Include Series",
             "type": "boolean",
-            "default": true
-        },
-        {
-            "id": "enable_4k",
-            "label": "Enable 4K Variants",
-            "type": "boolean",
-            "default": false
-        },
-        {
-            "id": "probe_missing_streams",
-            "label": "Probe Missing Stream Stats",
-            "type": "boolean",
-            "default": true
-        },
-        {
-            "id": "disable_unselected_variants",
-            "label": "Disable Unselected Variants",
-            "type": "boolean",
-            "default": true
-        },
-        {
-            "id": "sync_vod_strm_files",
-            "label": "Sync VOD .strm Files After Run",
-            "type": "boolean",
-            "default": false
+            "default": true,
+            "section": "Series"
         },
         {
             "id": "sync_series_strm_files",
             "label": "Sync Series .strm Files After Run",
             "type": "boolean",
-            "default": false
-        },
-        {
-            "id": "schedule_enabled",
-            "label": "Enable Scheduled Sync",
-            "type": "boolean",
-            "default": false
-        },
-        {
-            "id": "schedule_cron",
-            "label": "Schedule (Cron Expression)",
-            "type": "text",
-            "default": "0 * * * *"
+            "default": false,
+            "section": "Series"
         }
     ],
     "actions": [
