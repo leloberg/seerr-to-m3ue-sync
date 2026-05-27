@@ -1,7 +1,7 @@
 {
     "id": "seerr-to-m3ue-sync",
     "name": "Seerr to m3ue Sync",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "api_version": "1.0.0",
     "description": "Polls a Seerr instance and enables matched VOD and Series in a target Playlist.",
     "entrypoint": "Plugin.php",
@@ -83,6 +83,18 @@
             "label": "Disable Unselected Variants",
             "type": "boolean",
             "default": true
+        },
+        {
+            "id": "sync_vod_strm_files",
+            "label": "Sync VOD .strm Files After Run",
+            "type": "boolean",
+            "default": false
+        },
+        {
+            "id": "sync_series_strm_files",
+            "label": "Sync Series .strm Files After Run",
+            "type": "boolean",
+            "default": false
         },
         {
             "id": "schedule_enabled",
