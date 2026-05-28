@@ -101,7 +101,6 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
         $enable4kMovies = (bool) ($settings['enable_4k_movies'] ?? $legacyEnable4k);
         $enable4kSeries = (bool) ($settings['enable_4k_series'] ?? $legacyEnable4k);
         $probeMissing = (bool) ($settings['probe_missing_streams'] ?? true);
-        $disableUnselectedVariants = (bool) ($settings['disable_unselected_variants'] ?? true);
         $syncVodStrmFiles = (bool) ($settings['sync_vod_strm_files'] ?? false);
         $syncSeriesStrmFiles = (bool) ($settings['sync_series_strm_files'] ?? false);
         $isDryRun = (bool) $context->dryRun;
@@ -137,7 +136,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
 
         $probeTimeout = (int) (($moviePlaylist?->probe_timeout) ?? 15);
 
-        $context->info('Starting Seerr to m3ue Sync...');
+        $context->info('Starting Seerr to m3ue sync...');
         $context->info('Run mode: ' . ($isDryRun ? 'preview (read-only)' : 'sync (apply changes)'));
         $context->info('Effective settings: ' . json_encode([
             'media_types' => $mediaTypes,
@@ -147,7 +146,6 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             'enable_4k_series' => $enable4kSeries,
             'probe_missing_streams' => $probeMissing,
             'probe_timeout' => $probeTimeout,
-            'disable_unselected_variants' => $disableUnselectedVariants,
             'sync_vod_strm_files' => $syncVodStrmFiles,
             'sync_series_strm_files' => $syncSeriesStrmFiles,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -443,7 +441,6 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
         }
 
         $movieEnabledCount = 0;
-        $movieDisabledCount = 0;
         $selectedSet = array_fill_keys($selectedMovieChannelIds, true);
         $movieStrmSyncChannelIds = [];
         $applyTotal = count($matchedMovieChannels);
@@ -455,7 +452,7 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
             if ($context->cancellationRequested()) {
                 return PluginActionResult::cancelled(
                     "Cancelled while applying movie channel changes at {$applyProcessed}/{$applyTotal}.",
-                    ['movie_enabled_so_far' => $movieEnabledCount, 'movie_disabled_so_far' => $movieDisabledCount],
+                    ['movie_enabled_so_far' => $movieEnabledCount],
                 );
             }
 
@@ -474,16 +471,10 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 $movieStrmSyncChannelIds[$channel->id] = true;
             }
 
-            if ($disableUnselectedVariants && ! $shouldEnable && $channel->enabled) {
-                $channel->enabled = false;
-                $channel->save();
-                $movieDisabledCount++;
-            }
         }
 
         $seriesEnabledCount = 0;
         $seriesEpisodesEnabledCount = 0;
-        $seriesEpisodesDisabledCount = 0;
         $seriesSeasonApplied = [];
         $seriesMetadataFetchAttempts = 0;
         $seriesMetadataFetchSucceeded = 0;
@@ -493,7 +484,6 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 return PluginActionResult::cancelled('Cancelled while applying series changes.', [
                     'series_enabled_so_far' => $seriesEnabledCount,
                     'series_episode_enabled_so_far' => $seriesEpisodesEnabledCount,
-                    'series_episode_disabled_so_far' => $seriesEpisodesDisabledCount,
                 ]);
             }
 
@@ -584,7 +574,6 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                     return PluginActionResult::cancelled('Cancelled while applying requested seasons to episodes.', [
                         'series_enabled_so_far' => $seriesEnabledCount,
                         'series_episode_enabled_so_far' => $seriesEpisodesEnabledCount,
-                        'series_episode_disabled_so_far' => $seriesEpisodesDisabledCount,
                     ]);
                 }
 
@@ -608,11 +597,6 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                     continue;
                 }
 
-                if (! $shouldEnableEpisode && $disableUnselectedVariants && (bool) ($episode->enabled ?? false)) {
-                    $episode->enabled = false;
-                    $episode->save();
-                    $seriesEpisodesDisabledCount++;
-                }
             }
 
             $context->info(
@@ -667,14 +651,12 @@ class Plugin implements PluginInterface, ScheduledPluginInterface, HookablePlugi
                 'movie_channels_matched' => count($matchedMovieChannels),
                 'movie_channels_selected' => $selectedMovieCount,
                 'movie_channels_newly_enabled' => $movieEnabledCount,
-                'movie_channels_newly_disabled' => $movieDisabledCount,
                 'series_scanned' => $seriesCount,
                 'series_matched' => count($matchedSeries),
                 'series_newly_enabled' => $seriesEnabledCount,
                 'series_requested_seasons_applied' => $seriesSeasonApplied,
                 'series_skipped_partial_without_requested_seasons' => $seriesSkippedPartialWithoutRequestedSeasons,
                 'series_episodes_newly_enabled' => $seriesEpisodesEnabledCount,
-                'series_episodes_newly_disabled' => $seriesEpisodesDisabledCount,
                 'series_metadata_fetch_attempts' => $seriesMetadataFetchAttempts,
                 'series_metadata_fetch_succeeded' => $seriesMetadataFetchSucceeded,
                 'movie_skipped_fully_available' => $movieSkippedFullyAvailableCount,

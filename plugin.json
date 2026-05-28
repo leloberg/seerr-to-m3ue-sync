@@ -1,7 +1,7 @@
 {
     "id": "seerr-to-m3ue-sync",
-    "name": "Seerr to m3ue Sync",
-    "version": "1.3.0",
+    "name": "Seerr to m3ue sync",
+    "version": "1.4.0",
     "api_version": "1.0.0",
     "description": "Polls a Seerr instance and enables matched VOD and Series in a target Playlist.",
     "entrypoint": "Plugin.php",
@@ -45,17 +45,12 @@
                 {
                     "id": "seerr_api_key",
                     "label": "API Key",
-                    "type": "text"
+                    "type": "text",
+                    "helper_text": "Stored as a normal plugin setting. The current host plugin schema does not support masked or secret fields."
                 },
                 {
                     "id": "probe_missing_streams",
                     "label": "Probe Missing Stream Stats",
-                    "type": "boolean",
-                    "default": true
-                },
-                {
-                    "id": "disable_unselected_variants",
-                    "label": "Disable Unselected Variants",
                     "type": "boolean",
                     "default": true
                 },
