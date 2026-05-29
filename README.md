@@ -9,7 +9,7 @@ A plugin for [m3u-editor](https://github.com/m3ue/m3u-editor) that reads approve
 - Pulls request pages from Seerr for movie, tv, or both media types.
 - Routes movie requests to Channel matching in the configured movie playlist.
 - Routes tv requests to Series matching in the configured series playlist.
-- For matched series with requested seasons, enables episodes in requested seasons and can disable non-requested seasons.
+- For matched series with requested seasons, enables episodes in requested seasons.
 - Can probe matched movie variants and keep the best quality per title (with optional 4K inclusion).
 
 ## Requirements
@@ -43,7 +43,6 @@ Once staged, approve the install review in the UI and enable the plugin.
 | include_series | true | Include tv requests in sync. |
 | enable_4k | false | Keep one 4K variant in addition to best non-4K variant when available. |
 | probe_missing_streams | true | Probe missing stream stats before quality selection. |
-| disable_unselected_variants | true | Disable matched variants or episodes that are not selected by quality or season rules. |
 | schedule_enabled | false | Enable scheduled sync runs. |
 | schedule_cron | 0 * * * * | Cron expression used for scheduled sync. |
 
@@ -52,7 +51,7 @@ Once staged, approve the install review in the UI and enable the plugin.
 | Action | Description |
 |---|---|
 | sync | Runs full synchronization and applies changes. |
-| preview | Runs read-only preview and returns what would be enabled and disabled. |
+| preview | Runs read-only preview and returns what would be enabled. |
 | health_check | Tests Seerr connectivity and API key validity. |
 
 ## Hook behavior
