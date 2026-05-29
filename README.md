@@ -36,7 +36,7 @@ Once staged, approve the install review in the UI and enable the plugin.
 | Setting | Default | Description |
 |---|---|---|
 | seerr_url | - | Base URL of your Seerr instance. |
-| seerr_api_key | - | Seerr API key used for request and metadata endpoints. |
+| seerr_api_key | - | Seerr API key used for request and metadata endpoints. In host versions that include secret plugin fields, this input is masked and revealable. |
 | target_movie_playlist | - | Playlist used when processing movie requests. |
 | target_series_playlist | - | Playlist used when processing tv requests. |
 | include_movies | true | Include movie requests in sync. |
